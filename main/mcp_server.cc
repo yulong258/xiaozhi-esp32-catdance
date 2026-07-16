@@ -276,7 +276,18 @@ void McpServer::AddUserOnlyTools() {
                 }
                 http->Close();
 
-                auto image = std::make_unique<LvglAllocatedImage>(data, content_length);
+                // Check if downloaded data is a GIF (animation support)
+                bool is_gif = (content_length > 3 &&
+                              (uint8_t)data[0] == 'G' &&
+                              (uint8_t)data[1] == 'I' &&
+                              (uint8_t)data[2] == 'F');
+
+                std::unique_ptr<LvglImage> image;
+                if (is_gif) {
+                    image = std::make_unique<LvglGifImage>(data, content_length);
+                } else {
+                    image = std::make_unique<LvglAllocatedImage>(data, content_length);
+                }
                 display->SetPreviewImage(std::move(image));
                 return true;
             });

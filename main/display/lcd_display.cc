@@ -1013,6 +1013,30 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
     }
 
     preview_image_cached_ = std::move(image);
+
+    // Check if this is an animated GIF
+    if (preview_image_cached_->IsGif()) {
+        auto* gif_image = dynamic_cast<LvglGifImage*>(preview_image_cached_.get());
+        if (gif_image && gif_image->IsLoaded()) {
+            auto img_dsc = gif_image->image_dsc();
+            lv_image_set_src(preview_image_, img_dsc);
+            if (img_dsc->header.w > 0 && img_dsc->header.h > 0) {
+                lv_image_set_scale(preview_image_, 128 * width_ / img_dsc->header.w);
+            }
+            gif_image->Play(preview_image_, 0); // infinite loop
+
+            // Hide emoji_box_, show image, no timer (GIF plays continuously)
+            if (gif_controller_) {
+                gif_controller_->Stop();
+            }
+            lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_remove_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
+            esp_timer_stop(preview_timer_);
+            return;
+        }
+    }
+
+    // Non-GIF: regular static image
     auto img_dsc = preview_image_cached_->image_dsc();
     lv_image_set_src(preview_image_, img_dsc);
     if (img_dsc->header.w > 0 && img_dsc->header.h > 0) {

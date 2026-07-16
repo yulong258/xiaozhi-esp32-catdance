@@ -1,7 +1,8 @@
 #pragma once
 
 #include <lvgl.h>
-
+#include <memory>
+#include <functional>
 
 // Wrap around lv_img_dsc_t
 class LvglImage {
@@ -47,7 +48,39 @@ public:
     LvglAllocatedImage(void* data, size_t size, int width, int height, int stride, int color_format);
     virtual ~LvglAllocatedImage();
     virtual const lv_img_dsc_t* image_dsc() const override { return &image_dsc_; }
+    virtual bool IsGif() const override;
 
 private:
     lv_img_dsc_t image_dsc_;
+};
+
+// Forward declare LvglGif
+class LvglGif;
+
+/**
+ * LvglGifImage - Animated GIF image that wraps LvglGif.
+ * Inherits LvglImage so it can be used with LcdDisplay::SetPreviewImage().
+ * Calls LvglGif internally to decode and play the animation.
+ */
+class LvglGifImage : public LvglImage {
+public:
+    LvglGifImage(void* data, size_t size);
+    virtual ~LvglGifImage() override;
+    virtual const lv_img_dsc_t* image_dsc() const override;
+    virtual bool IsGif() const override { return true; }
+
+    /** Start playing the GIF. @param loop_count 0=infinite */
+    void Play(lv_obj_t* widget, int loop_count = 0);
+
+    /** Stop playing. */
+    void Stop();
+
+    /** Check if GIF loaded successfully. */
+    bool IsLoaded() const;
+
+private:
+    std::unique_ptr<LvglGif> gif_;
+    void* raw_data_ = nullptr;
+    size_t raw_size_ = 0;
+    lv_obj_t* widget_ = nullptr;
 };
